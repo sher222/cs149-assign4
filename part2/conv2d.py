@@ -72,7 +72,15 @@ def fused_conv2d_maxpool(X, W, bias, pool_size=1):
     for b in nl.affine_range(batch_size):
         # TODO: Perform the convolution of X[b] with the weights W and bias b, followed by a maxpool
         # and store the result in X_out[b]
-        continue
+        for c in nl.affine_range(n_tiles_c_in):
+            a_tile = nl.ndarray((c_in_pmax, input_height, input_width), dtype=X.dtype, buffer=nl.sbuf)
+            a_tile[...] = nl.load(X[b, c*c_in_pmax:(c+1)*c_in_pmax, :, :])
+
+            for i in nl.affine_range(out_height):
+                for j in nl.affine_range(out_width):
+                    X_out[b, :, i, j] = nl.matmul(
+                    a_tile[:, i:i+filter_height, j : j + filter_width] * W) + bias
+            
 
     return X_out
 
